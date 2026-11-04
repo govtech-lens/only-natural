@@ -62,6 +62,13 @@ function sffBadge(info) {
   return b;
 }
 
+// label-only mode: items that are not natural (or not readable) stay on the page and get a plain, non-clickable label
+function sffBadgeOther(kind, text) {
+  const b = sffEl("div", "sff-badge sff-badge-" + kind);
+  b.appendChild(sffEl("div", "sff-badge-main", (kind === "bad" ? "✖ " : "? ") + text));
+  return b;
+}
+
 // one practical tip, only when the page does not mention the thing a careful shopper would look for
 function sffTip(keys, ids) {
   const has = (list) => ids.some((i) => list.includes(i));

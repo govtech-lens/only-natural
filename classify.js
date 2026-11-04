@@ -4,7 +4,7 @@
 // To change what counts as OK, edit the two word lists below.
 
 // Bump this whenever the rules below change, so saved results from older rules are thrown away.
-const RULES_VERSION = 16;
+const RULES_VERSION = 19;
 
 // Words are written as small patterns; "[oó]" means "o or ó". Many languages are listed.
 const NATURAL_FIBRES = [
@@ -27,6 +27,7 @@ const NATURAL_FIBRES = [
   "ramie", "jute", "kapok", "bamboo", "bambus", "bambu", "bambou", "竹", "バンブー", "苎麻", "ラミー", "ジュート", "黄麻",
   // leather
   "\\p{L}+leder", "\\p{L}+leather", "rind", "rinds", "rindsleder", "kalb", "kalbs\\p{L}*", "ziegenleder", "lammleder", "nappa", "vachette", "veau", "agneau", "piel", "ternera", "cuoio", "vitello", "vacchetta", "\\p{L}+leer", "leer", "couro", "bezerro", "vaca",
+  "lammfell", "lammfelle", "schaffell", "schafsfell", "shearling", "sheepskin", "lambskin", "peau lainée",   // the whole skin with its wool: natural, like leather
   "leather", "leder", "cuir","cuero", "pelle", "couro", "skóra", "kůže", "deri", "кожа", "suede", "nubuck", "革", "レザー", "本革", "가죽", "真皮", "皮革",
 ];
 
@@ -241,6 +242,14 @@ function splitFibres(pairs) {
 function pageToText(html) {
   return html
     .replace(/\\u003c/gi, "<").replace(/\\u003e/gi, ">").replace(/\\u0026/gi, "&").replace(/\\"/g, '"')
+    // COS lists the materials of OTHER products ("you may also like") in the same data: never this product's own, so it is left out
+    .replace(/"sustainabilityComposition"\s*:\s*\[[\s\S]{0,4000}?\}\]\s*,\s*"/g, ' "')
+    // some shops keep the composition as data, not text: "materials":[{"name":"Kaschmir","percentage":100}],"type":"Obermaterial" (COS).
+    // It is written out as a normal line ("Composition Obermaterial: 100% Kaschmir"); the original text stays for the certificates.
+    .replace(/"materials"\s*:\s*\[([\s\S]{0,3000}?)\]\s*,\s*"type"\s*:\s*"([^"]{2,40})"/g, (all, body, type) => {
+      const parts = [...body.matchAll(/"name"\s*:\s*"([^"]{2,60})"\s*,\s*"percentage"\s*:\s*(\d{1,3}(?:\.\d+)?)/g)].map((m) => m[2] + "% " + m[1]);
+      return parts.length ? " Composition " + type + ": " + parts.join(", ") + " . " + all : all;
+    })
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/[®™©]/g, "")

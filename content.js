@@ -2,7 +2,8 @@
 // material list in the background and shows only products made purely from
 // natural materials.
 
-let hideUnknown = true;         // true = also hide items whose materials can't be read (can be switched in the popup)
+let labelOnly = false;          // true = hide nothing: every tile is read and gets a label (popup option)
+let hideUnknown = true;        // true = also hide items whose materials can't be read (can be switched in the popup)
 const MAX_PARALLEL = 10;       // how many product pages we read at once
 const LOOKAHEAD = 3;           // only check products up to this many screens below what you see (more as you scroll)
 const MIN_TILES = 4;           // fewer similar product tiles than this = not a shopping list (a lookbook, a home page...)
@@ -53,9 +54,11 @@ const MAX_FAILED_VISITS = 2;    // after this many failed rounds (3 attempts eac
 const BLOCK_LIMIT = 3, PAUSE_MS = 10 * 60 * 1000;
 let blockHits = 0, pausedUntil = 0, pauseTimer = null;
 const isPaused = () => Date.now() < pausedUntil;
+// Private windows: nothing is written to storage there (what was looked at stays in memory until the tab closes).
+const inPrivateWindow = () => { try { return !!chrome.extension.inIncognitoContext; } catch (e) { return false; } };
 function pauseShop(until) {
   pausedUntil = until || Date.now() + PAUSE_MS;
-  try {
+  if (!inPrivateWindow()) try {
     chrome.storage.local.get("sffPaused", (d) => {
       const p = d.sffPaused || {};
       p[location.host] = pausedUntil;
@@ -93,8 +96,25 @@ function tileShowsPrice(a) {
 }
 
 // A product link (with a picture) -> its address without #tracking bits, else null.
+// Some shops (Coach) put the picture next to the product link and stretch an empty link over it:
+// a big link lying on a picture counts like a link that contains it.
+function overlaysPicture(a) {
+  if (a.closest("[data-sff]")) return true;                        // in a tile we already handled (a hidden tile has no size to measure)
+  const r = a.getBoundingClientRect();
+  if (r.width < 80 || r.height < 80) return false;                 // a text link or a colour swatch
+  for (let el = a.parentElement, i = 0; el && i < 4; el = el.parentElement, i++) {
+    if ((el.textContent || "").length > 800) break;                 // a whole list, not one tile
+    for (const img of el.querySelectorAll("img, picture")) {
+      const q = img.getBoundingClientRect();
+      const w = Math.min(r.right, q.right) - Math.max(r.left, q.left), h = Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top);
+      if (w > 0 && h > 0 && w * h >= 0.5 * Math.min(r.width * r.height, q.width * q.height)) return true;
+    }
+  }
+  return r.width >= 150 && r.height >= 150 && tileShowsPrice(a);   // its picture has not loaded yet (lazy loading), but this is a big link in a box with a price
+}
+
 function productKey(a) {
-  if (!a.querySelector("img, picture")) return null;
+  if (!a.querySelector("img, picture") && !overlaysPicture(a)) return null;
   if (a.closest("header, nav, footer")) return null;
   let url;
   try { url = new URL(a.href, location.href); } catch (e) { return null; }
@@ -213,9 +233,14 @@ function findCards() {
   const linkSet = new Set(links.map((x) => x.a));
   const keyOf = new Map(links.map((x) => [x.a, x.p.key]));
   const tiles = new Map();                       // tile element -> its product links
+  const banners = [];                            // big "featured product" pictures that stand alone in the list (COS): only used once the page is a list
   links.forEach((l) => {
     const el = tileFor(l.a, l.p, linkSet, links, keyOf);
-    if (!el) return;
+    if (!el) {
+      const r = l.a.getBoundingClientRect();
+      if (STRICT_PRODUCT.test(l.a.pathname) && r.width >= 300 && r.height >= 300 && tileShowsPrice(l.a) && !tileProblem(l.a)) banners.push(l);
+      return;
+    }
     if (tileProblem(el)) return;
     // colour swatches and tiny thumbnails also link to products, but they are not product tiles
     const r = el.getBoundingClientRect();
@@ -229,6 +254,7 @@ function findCards() {
   const linkless = linklessCards();
   if (tiles.size < MIN_TILES || priced < tiles.size * 0.5) return linkless.size >= MIN_TILES ? linkless : new Map();
   const cards = linkless;
+  banners.forEach((l) => { if (!l.a.closest("[data-sff]") || l.a.matches("[data-sff]")) tiles.set(l.a, [l]); });
   tiles.forEach((list, el) => {
     // the tile's own product = its biggest picture link
     const area = (l) => { const r = l.a.getBoundingClientRect(); return r.width * r.height; };
@@ -278,7 +304,11 @@ function mark(card, verdict, reason, info) {
     if (getComputedStyle(card).position === "static") card.style.position = "relative";   // the label needs a positioned tile; one the shop already positions (a carousel slide) stays as it is
     card.appendChild(sffBadge({ reason, certs: (info && info.certs) || [], fibreKeys: (info && info.fibreKeys) || [], note: (info && info.note) || "", lining: (info && info.lining) || "" }));
   } else if (verdict === "pending") {
-    card.classList.add("sff-pending");
+    if (!labelOnly) card.classList.add("sff-pending");        // label-only: nothing is hidden, not even while it is being read
+  } else if (labelOnly) {                                       // nothing is hidden: not-natural and unreadable items get a plain label
+    if (followers.has(card)) return;
+    if (getComputedStyle(card).position === "static") card.style.position = "relative";
+    card.appendChild(sffBadgeOther(verdict === "bad" ? "bad" : "unknown", verdict === "bad" ? sffT("contains", { x: reason }) : sffT("unclear")));
   } else if (verdict === "bad" || hideUnknown) {
     card.classList.add(keepSpace ? "sff-ghost" : "sff-hidden");
   }
@@ -296,6 +326,17 @@ function pill() {
 
 // ---- when you are looking at ONE product page: show its own verdict next to the page ----
 let pageResult = null, pageUrl = "", pageTries = 0, pageTimer = null, pageLast = 0;
+const initialHref = location.href;
+
+// A product page reached from a list without a reload (single-page shops, e.g. COS) still holds the LIST's data in its code,
+// with other products' materials in it. So that page is downloaded again and read on its own.
+function probeByFetch(here) {
+  if (isPaused()) return;
+  readAndClassify(here).then((r) => {
+    if (location.href !== here) return;
+    if (r.verdict !== "unknown") { pageResult = r; updatePill(); }
+  }).catch(() => { clearTimeout(pageTimer); pageTimer = setTimeout(probeThisPage, 1800); });
+}
 
 function probeThisPage() {
   if (!enabled) return;
@@ -316,6 +357,7 @@ function probeThisPage() {
   const html = document.documentElement.outerHTML;
   if (!productAddress && (!/"@type"\s*:\s*"Product"/.test(html) || /"@type"\s*:\s*"ItemList"/.test(html))) return;   // a list of products is not one product
   pageTries++;
+  if (productAddress && location.href !== initialHref) { probeByFetch(location.href); return; }
   const r = classifyPage(html);
   // a clear "Composition" heading is required, unless the page address itself says "this is a product"
   if (r.verdict !== "unknown" && (r.strong || productAddress)) { pageResult = r; updatePill(); }
@@ -388,6 +430,7 @@ function loadStore(cb) {
     forceHosts = d.forceHosts || {};
     deepHosts = d.sffDeepHosts || {};
     hideUnknown = d.hideUnverified !== false;
+    labelOnly = d.labelOnly === true;
     cb(d.enabled);
   });
 }
@@ -395,6 +438,7 @@ function loadStore(cb) {
 function saveStoreSoon() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    if (inPrivateWindow()) return;
     const cutoff = Date.now() - CACHE_DAYS * 864e5;
     let entries = Object.entries(store).filter(([, e]) => e.t > cutoff && e.ver === RULES_VERSION);
     if (entries.length > CACHE_MAX) entries = entries.sort((a, b) => b[1].t - a[1].t).slice(0, CACHE_MAX);
@@ -517,7 +561,7 @@ async function check(job) {
             result = await renderAndClassify(job.href);
             if (staticMisses >= 3 && staticHits === 0) {        // every product so far: remember for this shop
               deepHosts[location.host] = Date.now();
-              chrome.storage.local.set({ sffDeepHosts: deepHosts });
+              if (!inPrivateWindow()) chrome.storage.local.set({ sffDeepHosts: deepHosts });
             }
           }
         }
@@ -770,7 +814,7 @@ function buildReport() {
 function clearAll() {
   queue.length = 0;
   ready.length = 0;
-  document.querySelectorAll(".sff-pending, .sff-hidden, .sff-ghost, .sff-ok").forEach((el) => {
+  document.querySelectorAll(".sff-pending, .sff-hidden, .sff-ghost, .sff-ok, [data-sff]").forEach((el) => {
     el.classList.remove("sff-pending", "sff-hidden", "sff-ghost", "sff-ok");
     delete el.dataset.sff;
   });
@@ -796,7 +840,15 @@ new MutationObserver((records) => {
   if (mine) return;
   clearTimeout(scanTimer);
   diag.observed++;
-  scanTimer = setTimeout(scan, 400);
+  // react fast, so a tile the page has just created is hidden or labelled within a few frames instead of showing for a moment;
+  // on a page that keeps changing all the time, slow down again so we do not eat the processor
+  const now = Date.now();
+  const restless = diag.scanTimes.filter((t) => now - t < 3000).length >= 12;
+  if (restless) scanTimer = setTimeout(scan, 400);
+  else {
+    scan();                                    // look at once, before the browser paints the new tiles ...
+    scanTimer = setTimeout(scan, 400);         // ... and again when layout and pictures have settled
+  }
 }).observe(document.documentElement, { childList: true, subtree: true });
 
 let scrollTimer = null;
@@ -820,6 +872,10 @@ chrome.storage.onChanged.addListener((changes) => {
   if (changes.hideUnverified) {
     hideUnknown = changes.hideUnverified.newValue !== false;
     if (enabled) { clearAll(); scan(); } // results are remembered, so this is instant
+  }
+  if (changes.labelOnly) {
+    labelOnly = changes.labelOnly.newValue === true;
+    if (enabled) { clearAll(); scan(); }
   }
   if (changes.enabled) setEnabled(changes.enabled.newValue);
 });

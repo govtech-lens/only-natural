@@ -1,7 +1,7 @@
 const btn = document.getElementById("toggle");
 const label = document.getElementById("label");
 const hint = document.getElementById("hint");
-const strict = document.getElementById("strict");
+const mode = document.getElementById("mode");
 const siteRow = document.getElementById("siteRow");
 const site = document.getElementById("site");
 const siteNote = document.getElementById("siteNote");
@@ -9,19 +9,32 @@ const siteNote = document.getElementById("siteNote");
 // the popup speaks the language of the browser
 document.documentElement.lang = sffLang();
 document.getElementById("title").textContent = sffT("title");
-document.getElementById("strictLabel").textContent = " " + sffT("strict");
+// one choice instead of two boxes: what happens to items that are not natural (or cannot be read)
+//   hide   = hide plastic items and unreadable ones (default)   plastic = hide plastic items only   labels = hide nothing, only add labels
+[["hide", "modeHide"], ["plastic", "modePlastic"], ["labels", "modeLabels"]].forEach(([v, k]) => {
+  const o = document.createElement("option");
+  o.value = v; o.textContent = sffT(k);
+  mode.appendChild(o);
+});
 
+let isOn = false;
 function show(on) {
+  isOn = on;
   label.textContent = on ? sffT("on") : sffT("off");
   btn.className = on ? "on" : "";
-  hint.textContent = on ? sffT("hintOn") : sffT("hintOff");
+  hint.textContent = !on ? sffT("hintOff") : mode.value === "hide" ? sffT("hintOn") : mode.value === "labels" ? sffT("hintLabels") : "";
 }
 
-chrome.storage.local.get(["enabled", "hideUnverified"], (d) => {
+chrome.storage.local.get(["enabled", "hideUnverified", "labelOnly"], (d) => {
+  mode.value = d.labelOnly === true ? "labels" : d.hideUnverified === false ? "plastic" : "hide";
   show(!!d.enabled);
-  strict.checked = d.hideUnverified !== false;
 });
-strict.addEventListener("change", () => chrome.storage.local.set({ hideUnverified: strict.checked }));
+mode.addEventListener("change", () => {
+  // "labels" keeps the old "hide unreadable" choice untouched; the other two set it
+  if (mode.value === "labels") chrome.storage.local.set({ labelOnly: true });
+  else chrome.storage.local.set({ labelOnly: false, hideUnverified: mode.value === "hide" });
+  show(isOn);
+});
 
 btn.addEventListener("click", () => {
   chrome.storage.local.get("enabled", (d) => {

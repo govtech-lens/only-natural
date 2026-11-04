@@ -148,3 +148,24 @@ const { materialsPresent } = require("./classify.js");
 chk("perfume page: no material words", !materialsPresent("<p>Zusammensetzung und Inhaltsstoffe ALCOHOL, PARFUM, AQUA, LINALOOL</p>"));
 chk("shoe page: material words present", materialsPresent("<p>Zusammensetzung Vorderblatt aus zebraleder; futter aus lammleder</p>"));
 chk("rubber note for sole aus gummi", classifyPage(words[2][1]).note === "soleRubber");
+// Coach: shearling and lamb fur are natural; a plastic lining still hides the item
+for (const [n, html, want] of [
+  ["Lammfell with Schurwolle", "<ul><li> 100 % Lammfell mit Schurwolle</li><li>Lederdetails</li></ul>", "ok"],
+  ["Shearling", "<ul><li>100 % Shearling</li></ul>", "ok"],
+  ["Lammfell with a plastic lining", "<ul><li> 100 % Lammfell mit Schurwolle</li><li>Futter: 100 % recyceltes Polyamid</li></ul>", "bad"],
+]) { const r = classifyPage(html); chk(n + " -> " + r.verdict, r.verdict === want); }
+// COS: the composition is data in the page, with the lining (TENCEL) listed after the cashmere shell
+const cosJson = (shell, lining) => '<script>{"composition":[{"materials":[{"name":"' + shell + '","percentage":100,"description":null,"certificate":{"certifiedId":null,"certifiedMaterial":"The Good Cashmere Standard","certifiedCountries":[]}}],"type":"Obermaterial"},{"materials":[{"name":"' + lining + '","percentage":100,"description":"Faser auf Holzbasis","certificate":null}],"type":"Futter"}],"weight":{"unit":"kg"}}</script>';
+{
+  const r = classifyPage(cosJson("GCS-Kaschmir", "TENCEL™ Lyocell"));
+  chk("COS cashmere shell with Lyocell lining -> label Kaschmir", r.verdict === "ok" && /kaschmir/i.test(r.reason) && !/tencel|lyocell/i.test(r.reason));
+  const p = classifyPage(cosJson("Polyester", "Viskose"));
+  chk("COS polyester shell is still hidden", p.verdict === "bad");
+}
+// COS: a product without its own composition must not borrow the materials of recommended products
+{
+  const rec = (m) => '"sustainabilityComposition":[{"type":"Obermaterial","materials":[{"material":"' + m + '","percentage":100,"description":"Faser"}]}],"totalStock":1';
+  const none = (m) => '<script>{"composition":null,"x":[{"sku":"1",' + rec(m) + '}]}</script>';
+  chk("COS no own composition, recommended item is plastic -> unknown", classifyPage(none("Polyester")).verdict === "unknown");
+  chk("COS no own composition, recommended item is cotton -> unknown", classifyPage(none("Pima-Baumwolle")).verdict === "unknown");
+}

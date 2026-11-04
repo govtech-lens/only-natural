@@ -67,7 +67,7 @@ One rule for everything would have hidden nearly every shoe. So I decided per pa
 I considered adding a footprint score. I decided against it for three reasons. Product pages don't contain the data (origin, energy, dyeing, shipping, garment weight). Published fibre figures vary so much that many fibres could not be placed in one band honestly. And an invented number would look more precise than it is, which is greenwashing in reverse. I would add an estimate only if independent sources agreed on a ranking. I'd rather be useful than look precise.
 
 **5. When the page is unclear, the item is hidden, and there is a switch for it.**
-"Strict" is the default: if the material cannot be read, the item is hidden, because the promise of the tool is "everything you see is natural". Users who prefer to see unclear items too can switch strict mode off. The cost is that some good items are missing. I chose to miss good items rather than to show wrong ones.
+"Strict" is the default: if the material cannot be read, the item is hidden, because the promise of the tool is "everything you see is natural". Users who prefer to see unclear items too can switch strict mode off. Users who want to see everything can choose "label only": nothing is hidden, natural items get the green label, plastic-based ones a "✖ Contains …" label and unreadable ones a grey "?" label. The cost of strict mode is that some good items are missing. I chose to miss good items rather than to show wrong ones.
 
 **6. The tool never works around a shop's protection.**
 When a shop blocks the extension, it pauses and says so in the bubble, instead of hiding what it could not check or trying to get around the block. A tool about responsible shopping should act responsibly itself.
@@ -147,13 +147,13 @@ On those 63 shops, it kept 379 of 1,431 tested products.
 
 ### Firefox
 
-The same folder works in Firefox 128 or newer.
+The same folder works in Firefox 140 or newer (desktop).
 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on** and select the `manifest.json` in this folder.
 3. When asked, allow the extension on all websites (Firefox: *Manage Extension → Permissions*). Without that permission it cannot read product pages.
 
-A temporary add-on is removed when Firefox closes. For a permanent install it has to be signed through addons.mozilla.org. Firefox support is new and only lightly tested, so Chrome and Edge remain the main tested browsers.
+A temporary add-on is removed when Firefox closes. For a permanent install it has to be signed through addons.mozilla.org. I tested it in Firefox 159 on a demo shop and on H&M, Marks & Spencer, Gap, ASOS, Next and Coach, including the real install and switch-on flow; results matched Chrome. Firefox for Android has not been tested. See [PRIVACY.md](PRIVACY.md) for what the extension does and does not do with data.
 
 ### Something not working?
 

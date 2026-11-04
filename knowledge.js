@@ -21,7 +21,7 @@ const SFF_FIBRES = {
   cupro: { words: ["cupro","キュプラ","铜氨"] },
   bamboo: { words: ["bamboo","bambus","bambu","bambou","竹"] },
   ramie: { words: ["ramie","jute","kapok","苎麻","ラミー","ジュート","黄麻"] },
-  leather: { words: ["\\p{L}+leder","\\p{L}+leather","rind","rindsleder","kalb\\p{L}*","nappa","vachette","veau","agneau","piel","ternera","cuoio","vitello","vacchetta","\\p{L}*leer","bezerro","leather","leder","cuir","cuero","pelle","couro","skóra","suede","nubuck","革","レザー","本革","가죽","真皮","皮革"] },
+  leather: { words: ["lammfell","lammfelle","schaffell","schafsfell","shearling","sheepskin","lambskin","\\p{L}+leder","\\p{L}+leather","rind","rindsleder","kalb\\p{L}*","nappa","vachette","veau","agneau","piel","ternera","cuoio","vitello","vacchetta","\\p{L}*leer","bezerro","leather","leder","cuir","cuero","pelle","couro","skóra","suede","nubuck","革","レザー","本革","가죽","真皮","皮革"] },
 };
 
 // ---------- certifications and claims ----------
