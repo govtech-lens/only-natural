@@ -4,7 +4,7 @@
 // To change what counts as OK, edit the two word lists below.
 
 // Bump this whenever the rules below change, so saved results from older rules are thrown away.
-const RULES_VERSION = 19;
+const RULES_VERSION = 20;
 
 // Words are written as small patterns; "[oó]" means "o or ó". Many languages are listed.
 const NATURAL_FIBRES = [

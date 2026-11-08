@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Only Natural",
-  "version": "1.26",
+  "version": "1.27",
   "description": "One button: show only clothes made from natural, non-plastic materials (wool, cashmere, lyocell, cotton, linen...).",
   "browser_specific_settings": {
     "gecko": {

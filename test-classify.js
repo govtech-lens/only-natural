@@ -169,3 +169,14 @@ const cosJson = (shell, lining) => '<script>{"composition":[{"materials":[{"name
   chk("COS no own composition, recommended item is plastic -> unknown", classifyPage(none("Polyester")).verdict === "unknown");
   chk("COS no own composition, recommended item is cotton -> unknown", classifyPage(none("Pima-Baumwolle")).verdict === "unknown");
 }
+
+// ---- which links count as product links (content.js) ----
+{
+  const src = require("fs").readFileSync(__dirname + "/content.js", "utf8");
+  const m = /const PRODUCT_HINT = (\/.*\/i);/.exec(src);
+  const hint = eval(m[1]);
+  chk("Category 'women/tops/t-shirts' is not a product address", !hint.test("/de/de/women/tops/t-shirts"));
+  chk("Category 't-shirts-and-polos' is not a product address", !hint.test("/en/men/tops/t-shirts-and-polos"));
+  chk("Product address '/t/air-max' still counts", hint.test("/t/air-max-90-shoes"));
+  chk("Product address '/products/E123456-000/00' still counts", hint.test("/de/de/products/E475306-000/00"));
+}

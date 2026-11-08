@@ -74,7 +74,7 @@ function pauseShop(until) {
 // typical product addresses: /p/…, /product/…, /prd/…, …-p12345.html, long ID numbers.
 // A plain ".html" ending is not enough on its own (category and promo tiles end that way too);
 // those need a visible price on the tile instead (see tileShowsPrice).
-const PRODUCT_HINT = /\/(p|pd|prd|product|products|productpage|pdp|item|items|detail|details|goods|good|art|article|buy|dp|listing|itm|t)[\/\.\-_]|[-_/]p[-_]?\d{4,}|\d{5,}|\d{3,}[-_]\d{3,}/i;
+const PRODUCT_HINT = /\/(p|pd|prd|product|products|productpage|pdp|item|items|detail|details|goods|good|art|article|buy|dp|listing|itm)[\/\.\-_]|\/t\/|[-_/]p[-_]?\d{4,}|\d{5,}|\d{3,}[-_]\d{3,}/i;   // "/t/" only with a slash: "/t-shirts" is a category, not a product
 
 const STRICT_PRODUCT = /\/(p|pd|prd|product|products|productpage|pdp|item|dp)[\/.\-_]|[-_/]p[-_]?\d{4,}/i;   // an address that clearly says "one product"
 

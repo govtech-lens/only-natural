@@ -4,6 +4,10 @@ Most fixes below were **found on one shop** (COS in this round) but are written 
 
 How far each change was checked: the reading rules are covered by the unit tests (`test-classify.js`). The behaviour in the browser was checked on the shop where the problem showed up. It was **not** re-run on all shops after each change, so a change that helps one shop could in principle affect another. Please report anything odd (popup → "Something wrong? Copy report").
 
+## 1.27: category links that look like product links, and a popup made for phones
+- Links to a category (for example a big picture on a home page that leads to "T-shirts") were sometimes treated as one product, because the address starts with "/t". The category page lists many products, so its first material was shown as if it belonged to the picture. The "/t" rule now only counts as a product address when it is a real "/t/" folder. Found on Uniqlo, applies to every shop.
+- The popup now fills the screen on phones and tablets (Firefox for Android): larger text, a larger on/off button and menu, and tap targets of at least 48 px. On desktop it looks the same as before.
+
 ## 1.26 and 1.25: choose what happens to items that are not natural
 - New **"Hide nothing, labels only"** mode: every item is read and gets a label, nothing is hidden. Natural items get the green label, plastic-based ones a "✖ Contains …" label, unreadable ones a grey "?" label. Works the same on every shop.
 - The two checkboxes in the popup became **one choice with three options**: hide plastic and unclear items (default) / hide only plastic items / hide nothing, labels only. Old settings carry over.
