@@ -41,7 +41,7 @@ Material readings come from the shop's own pages and can be wrong. They are not 
 
 ## Contact
 
-Questions or concerns: https://github.com/govtech-lens/Only-natural/issues
+Questions or concerns: https://github.com/govtech-lens/only-natural/issues
 
 ## Changes
 
